@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: server
+groq:
+  api:
+    key: ${GROQ_API_KEY}
