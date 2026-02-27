@@ -1,4 +1,4 @@
-# Schmackofatz 🍳
+# Schmackofatz
 
 Enter ingredients and get AI-powered recipe suggestions, streamed in real-time.
 
