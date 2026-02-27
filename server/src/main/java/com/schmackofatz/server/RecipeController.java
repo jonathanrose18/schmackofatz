@@ -8,10 +8,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class RecipeController {
 
     private final GroqService groqService;
-
     public RecipeController(GroqService groqService) {
         this.groqService = groqService;
     }

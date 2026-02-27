@@ -4,3 +4,6 @@ spring:
 groq:
   api:
     key: ${GROQ_API_KEY}
+app:
+  cors:
+    allowed-origins: ${APP_URL:http://localhost:3000}
