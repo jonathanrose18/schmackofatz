@@ -1,21 +1,57 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
-import { useEffect, useRef } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 
 interface RecipeStreamProps {
   content: string;
   loading: boolean;
 }
 
-export function RecipeStream({ content, loading }: RecipeStreamProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+const markdownComponents: Components = {
+  h2: ({ children }) => (
+    <h2 className="mt-8 first:mt-0 border-b border-border pb-2 text-xl font-semibold tracking-tight text-foreground">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => (
+    <p className="mt-2 text-sm leading-relaxed text-foreground">{children}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-accent">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mt-2 list-decimal space-y-2 pl-5 marker:font-medium marker:text-accent">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="pl-1 text-sm leading-relaxed">{children}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+};
 
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [content]);
+function hasExpectedStructure(markdown: string) {
+  const requiredPatterns = [
+    /##\s*rezeptvorschlag\s*1/i,
+    /###\s*zutaten/i,
+    /###\s*schritte/i,
+    /###\s*zeit/i,
+  ];
+
+  return requiredPatterns.every((pattern) => pattern.test(markdown));
+}
+
+export function RecipeStream({ content, loading }: RecipeStreamProps) {
+  const showFallback = !loading && !!content && !hasExpectedStructure(content);
 
   if (!content && !loading) {
     return (
@@ -47,17 +83,36 @@ export function RecipeStream({ content, loading }: RecipeStreamProps) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative max-h-[60vh] overflow-y-auto rounded-xl bg-card border border-border p-6"
-    >
-      <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert">
-        <div className="text-sm text-foreground leading-relaxed font-sans">
-          <ReactMarkdown>{content}</ReactMarkdown>
-          {loading && (
-            <span className="inline-block ml-0.5 w-[2px] h-4 bg-accent animate-pulse" />
-          )}
-        </div>
+    <div className="relative">
+      <div className="max-w-none">
+        {showFallback ? (
+          <div className="space-y-4 rounded-lg border border-dashed border-border bg-muted/30 p-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              Rezeptausgabe
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Die Antwort kam nicht komplett im erwarteten Format. Der Rohtext
+              bleibt unten sichtbar.
+            </p>
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Rohtext
+              </h3>
+              <pre className="whitespace-pre-wrap wrap-break-word font-sans text-sm leading-relaxed text-foreground">
+                {content}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-foreground leading-relaxed font-sans">
+            <ReactMarkdown components={markdownComponents}>
+              {content}
+            </ReactMarkdown>
+            {loading && (
+              <span className="inline-block ml-0.5 w-[2px] h-4 bg-accent animate-pulse" />
+            )}
+          </div>
+        )}
       </div>
       {loading && !content && (
         <div className="flex items-center gap-3 py-4">

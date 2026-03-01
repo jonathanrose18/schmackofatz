@@ -37,17 +37,55 @@ export default function Home() {
         },
       );
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
+      if (!response.ok) {
+        throw new Error(`API Fehler: ${response.status}`);
+      }
+      if (!response.body) {
+        throw new Error("Leere Streaming-Antwort");
+      }
 
-      while (true) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamEnded = false;
+
+      const appendEvent = (rawEvent: string) => {
+        const data = rawEvent
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5))
+          .join("\n");
+
+        if (!data) return;
+        if (data === "[DONE]") {
+          streamEnded = true;
+          return;
+        }
+
+        setResult((prev) => prev + data);
+      };
+
+      while (!streamEnded) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data:"));
-        for (const line of lines) {
-          setResult((prev) => prev + line.replace("data:", ""));
+
+        buffer += decoder.decode(value, { stream: true });
+        buffer = buffer.replace(/\r\n/g, "\n");
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          if (!event.trim()) continue;
+          appendEvent(event);
+          if (streamEnded) break;
         }
+      }
+
+      buffer += decoder.decode();
+      buffer = buffer.replace(/\r\n/g, "\n");
+      const remainingEvent = buffer.trim();
+      if (!streamEnded && remainingEvent) {
+        appendEvent(remainingEvent);
       }
     } catch (error) {
       console.error("Fehler beim Laden:", error);
@@ -66,7 +104,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-6 py-12 md:py-20">
+      <div className="mx-auto max-w-6xl px-6 py-12 md:py-20">
         {/* Header */}
         <header className="mb-12">
           <div className="flex items-center gap-3 mb-3">
