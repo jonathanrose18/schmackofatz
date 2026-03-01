@@ -2,6 +2,8 @@
 
 import ReactMarkdown, { type Components } from 'react-markdown';
 
+import { hasExpectedRecipeStructure } from '@/lib/recipes/recipe-format';
+
 interface RecipeStreamProps {
    content: string;
    loading: boolean;
@@ -25,19 +27,8 @@ const markdownComponents: Components = {
    strong: ({ children }) => <strong className='text-foreground font-semibold'>{children}</strong>,
 };
 
-function hasExpectedStructure(markdown: string) {
-   const requiredPatterns = [
-      /##\s*(rezeptvorschlag|recipe suggestion)\s*1/i,
-      /###\s*(zutaten|ingredients)/i,
-      /###\s*(schritte|steps)/i,
-      /###\s*(zeit|time)/i,
-   ];
-
-   return requiredPatterns.every(pattern => pattern.test(markdown));
-}
-
 export function RecipeStream({ content, loading }: RecipeStreamProps) {
-   const showFallback = !loading && !!content && !hasExpectedStructure(content);
+   const showFallback = !loading && !!content && !hasExpectedRecipeStructure(content);
 
    if (!content && !loading) {
       return (

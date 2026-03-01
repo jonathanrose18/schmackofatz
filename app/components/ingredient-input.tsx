@@ -3,6 +3,7 @@
 import { useState, useRef, type KeyboardEvent } from 'react';
 import { X, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { normalizeIngredient } from '@/lib/ingredients';
 
 interface IngredientInputProps {
    ingredients: string[];
@@ -26,11 +27,11 @@ export function IngredientInput({ ingredients, onAdd, onRemove, disabled = false
    }
 
    function addIngredient() {
-      const trimmed = value.trim().replace(/,/g, '');
-      if (trimmed && !ingredients.includes(trimmed)) {
-         onAdd(trimmed);
-         setValue('');
-      }
+      const normalized = normalizeIngredient(value);
+      if (!normalized) return;
+
+      onAdd(normalized);
+      setValue('');
    }
 
    return (

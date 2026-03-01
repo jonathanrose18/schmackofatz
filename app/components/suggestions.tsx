@@ -2,33 +2,18 @@
 
 import { Button } from '@/components/ui/button';
 
-const SUGGESTIONS = [
-   'Tomatoes',
-   'Onions',
-   'Garlic',
-   'Potatoes',
-   'Bell pepper',
-   'Rice',
-   'Pasta',
-   'Chicken',
-   'Eggs',
-   'Cheese',
-];
-
 interface SuggestionsProps {
+   suggestions: string[];
    onSelect: (ingredient: string) => void;
-   existing: string[];
    disabled?: boolean;
 }
 
-export function Suggestions({ onSelect, existing, disabled }: SuggestionsProps) {
-   const available = SUGGESTIONS.filter(s => !existing.includes(s));
-
-   if (available.length === 0) return null;
+export function Suggestions({ suggestions, onSelect, disabled }: SuggestionsProps) {
+   if (suggestions.length === 0) return null;
 
    return (
       <div className='flex flex-wrap gap-1.5'>
-         {available.map(suggestion => (
+         {suggestions.map(suggestion => (
             <Button
                key={suggestion}
                variant='outline'
