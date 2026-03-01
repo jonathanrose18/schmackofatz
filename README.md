@@ -4,7 +4,7 @@ Enter ingredients and get AI-powered recipe suggestions, streamed in real-time.
 
 ## Stack
 
-- **App** – Expo (React Native)
+- **App** – Next.js
 - **Server** – Java Spring Boot
 - **AI** – Llama 3.3 via Groq
 
