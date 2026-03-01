@@ -41,10 +41,10 @@ const markdownComponents: Components = {
 
 function hasExpectedStructure(markdown: string) {
   const requiredPatterns = [
-    /##\s*rezeptvorschlag\s*1/i,
-    /###\s*zutaten/i,
-    /###\s*schritte/i,
-    /###\s*zeit/i,
+    /##\s*(rezeptvorschlag|recipe suggestion)\s*1/i,
+    /###\s*(zutaten|ingredients)/i,
+    /###\s*(schritte|steps)/i,
+    /###\s*(zeit|time)/i,
   ];
 
   return requiredPatterns.every((pattern) => pattern.test(markdown));

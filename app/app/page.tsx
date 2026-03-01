@@ -12,6 +12,7 @@ export default function Home() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState<"de" | "en">("de");
 
   const addIngredient = useCallback((ingredient: string) => {
     setIngredients((prev) => [...prev, ingredient]);
@@ -28,14 +29,19 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/recipes/stream`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(ingredients),
-        },
-      );
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!baseUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL ist nicht gesetzt");
+      }
+
+      const apiUrl = new URL("/api/recipes/stream", baseUrl);
+      apiUrl.searchParams.set("language", language);
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ingredients),
+      });
 
       if (!response.ok) {
         throw new Error(`API Fehler: ${response.status}`);
@@ -123,9 +129,31 @@ export default function Home() {
 
         {/* Ingredient Input */}
         <section className="mb-6" aria-label="Zutaten">
-          <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-            Zutaten
-          </label>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
+            <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Zutaten
+            </label>
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="language"
+                className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+              >
+                Sprache
+              </label>
+              <select
+                id="language"
+                value={language}
+                onChange={(event) =>
+                  setLanguage(event.target.value as "de" | "en")
+                }
+                disabled={loading}
+                className="h-10 min-w-36 rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
           <IngredientInput
             ingredients={ingredients}
             onAdd={addIngredient}
@@ -178,13 +206,6 @@ export default function Home() {
         <section aria-label="Rezept Ergebnis" aria-live="polite">
           <RecipeStream content={result} loading={loading} />
         </section>
-
-        {/* Footer */}
-        <footer className="mt-16 pt-8 border-t border-border">
-          <p className="text-xs text-muted-foreground/60 text-center">
-            Rezepte werden per KI generiert und koennen variieren.
-          </p>
-        </footer>
       </div>
     </main>
   );

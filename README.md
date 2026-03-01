@@ -27,10 +27,10 @@ Server runs on `http://localhost:8080`
 
 ## API
 
-`POST /api/recipes/stream` – streams recipe suggestions for a list of ingredients
+`POST /api/recipes/stream?language=de|en` – streams recipe suggestions for a list of ingredients in German (`de`, default) or English (`en`)
 
 ```bash
-curl -N -X POST http://localhost:8080/api/recipes/stream \
+curl -N -X POST "http://localhost:8080/api/recipes/stream?language=en" \
   -H "Content-Type: application/json" \
   -d '["tomatoes", "onions", "garlic"]'
 ```

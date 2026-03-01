@@ -17,7 +17,9 @@ public class RecipeController {
     }
 
     @PostMapping(value = "/recipes/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamRecipes(@RequestBody List<String> ingredients) {
-        return groqService.streamRecipeSuggestions(ingredients);
+    public Flux<String> streamRecipes(
+            @RequestBody List<String> ingredients,
+            @RequestParam(defaultValue = "de") String language) {
+        return groqService.streamRecipeSuggestions(ingredients, language);
     }
 }

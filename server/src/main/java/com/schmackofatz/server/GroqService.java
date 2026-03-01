@@ -26,8 +26,92 @@ public class GroqService {
                 .build();
     }
 
-    public Flux<String> streamRecipeSuggestions(List<String> ingredients) {
-        String systemPrompt = """
+    public Flux<String> streamRecipeSuggestions(List<String> ingredients, String language) {
+        String normalizedLanguage = normalizeLanguage(language);
+        String systemPrompt = buildSystemPrompt(normalizedLanguage);
+        String exampleUser = buildExampleUser(normalizedLanguage);
+        String exampleAssistant = buildExampleAssistant(normalizedLanguage);
+        String userPrompt = buildUserPrompt(ingredients, normalizedLanguage);
+
+        var requestBody = Map.of(
+                "model", "llama-3.3-70b-versatile",
+                "stream", true,
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", exampleUser),
+                        Map.of("role", "assistant", "content", exampleAssistant),
+                        Map.of("role", "user", "content", userPrompt)
+                )
+        );
+
+        return Flux.create(emitter -> {
+            restClient.post()
+                    .uri("/chat/completions")
+                    .body(requestBody)
+                    .exchange((request, response) -> {
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(response.getBody()))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.startsWith("data: ")) {
+                                    String data = line.substring(6);
+                                    if (data.equals("[DONE]")) break;
+                                    JsonNode node = mapper.readTree(data);
+                                    JsonNode content = node.path("choices")
+                                            .get(0).path("delta").path("content");
+                                    if (!content.isMissingNode()) {
+                                        emitter.next(content.asText());
+                                    }
+                                }
+                            }
+                        }
+                        emitter.complete();
+                        return null;
+                    });
+        });
+    }
+
+    private String normalizeLanguage(String language) {
+        if (language == null) {
+            return "de";
+        }
+        String normalized = language.trim().toLowerCase();
+        return normalized.equals("en") ? "en" : "de";
+    }
+
+    private String buildSystemPrompt(String language) {
+        if (language.equals("en")) {
+            return """
+                    You are a precise English-speaking cooking assistant.
+                    Always answer as valid Markdown and exactly in this order:
+                    1) ## Recipe Suggestion 1: <Name>
+                    2) **Short description:** <one sentence>
+                    3) ### Ingredients
+                    4) ### Steps
+                    5) ### Time
+                    6) ### Tip
+                    7) ## Recipe Suggestion 2: <Name>
+                    8) **Short description:** <one sentence>
+                    9) ### Ingredients
+                    10) ### Steps
+                    11) ### Time
+                    12) ### Tip
+
+                    Formatting rules:
+                    - Under "Ingredients", use bullet lists only with "- ".
+                    - Under "Steps", use a numbered list only with "1. 2. 3.".
+                    - Under "Time", provide exactly three bullet points:
+                      - Prep: <...>
+                      - Cook: <...>
+                      - Total: <...>
+                    - Always put one space after Markdown markers: "## Title", "### Title", "- Item", "1. Step".
+                    - No introduction, no conclusion, no extra headings.
+                    - Maximum 2 recipe suggestions.
+                    - Prioritize the provided ingredients and only use basic pantry items (salt, pepper, oil, water).
+                    """;
+        }
+
+        return """
                 Du bist ein praeziser deutschsprachiger Kochassistent.
                 Antworte immer als gueltiges Markdown und exakt in dieser Reihenfolge:
                 1) ## Rezeptvorschlag 1: <Name>
@@ -55,9 +139,61 @@ public class GroqService {
                 - Maximal 2 Rezeptvorschlaege.
                 - Nutze vorrangig die gegebenen Zutaten und nur einfache Basiszutaten (Salz, Pfeffer, Oel, Wasser).
                 """;
+    }
 
-        String exampleUser = "Zutaten: Eier, Tomaten, Zwiebel";
-        String exampleAssistant = """
+    private String buildExampleUser(String language) {
+        if (language.equals("en")) {
+            return "Ingredients: eggs, tomatoes, onion";
+        }
+        return "Zutaten: Eier, Tomaten, Zwiebel";
+    }
+
+    private String buildExampleAssistant(String language) {
+        if (language.equals("en")) {
+            return """
+                    ## Recipe Suggestion 1: Tomato Scrambled Eggs
+                    **Short description:** A quick and juicy scramble with fresh tomato flavor.
+                    ### Ingredients
+                    - 3 eggs
+                    - 2 tomatoes
+                    - 1 small onion
+                    - 1 tbsp oil
+                    - Salt and pepper
+                    ### Steps
+                    1. Finely chop the onion and saute in oil until translucent.
+                    2. Dice the tomatoes, add them briefly, and season lightly with salt.
+                    3. Beat the eggs, pour into the pan, and cook until just set.
+                    4. Finish with pepper and serve immediately.
+                    ### Time
+                    - Prep: 5 minutes
+                    - Cook: 8 minutes
+                    - Total: 13 minutes
+                    ### Tip
+                    Serve with toasted bread.
+
+                    ## Recipe Suggestion 2: Egg and Tomato Skillet
+                    **Short description:** A rustic one-pan dish with just a few everyday ingredients.
+                    ### Ingredients
+                    - 2 eggs
+                    - 3 tomatoes
+                    - 1 onion
+                    - 1 tbsp oil
+                    - Salt and pepper
+                    ### Steps
+                    1. Saute the onion in oil.
+                    2. Add tomatoes and simmer for 5 minutes.
+                    3. Crack the eggs directly into the pan and cook until set.
+                    4. Season with salt and pepper to taste.
+                    ### Time
+                    - Prep: 6 minutes
+                    - Cook: 10 minutes
+                    - Total: 16 minutes
+                    ### Tip
+                    Add a little chili if you like extra heat.
+                    """;
+        }
+
+        return """
                 ## Rezeptvorschlag 1: Tomaten-Ruehrei
                 **Kurzbeschreibung:** Ein schnelles, saftiges Ruehrei mit frischer Tomatennote.
                 ### Zutaten
@@ -98,45 +234,15 @@ public class GroqService {
                 ### Tipp
                 Wer mag, gibt etwas Chili fuer Schaerfe dazu.
                 """;
+    }
 
-        String userPrompt = "Zutaten: " + String.join(", ", ingredients) +
+    private String buildUserPrompt(List<String> ingredients, String language) {
+        String ingredientList = String.join(", ", ingredients);
+        if (language.equals("en")) {
+            return "Ingredients: " + ingredientList +
+                    ". Create exactly 2 recipe suggestions in the required format.";
+        }
+        return "Zutaten: " + ingredientList +
                 ". Erstelle daraus genau 2 Rezeptvorschlaege im vorgegebenen Format.";
-
-        var requestBody = Map.of(
-                "model", "llama-3.3-70b-versatile",
-                "stream", true,
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", exampleUser),
-                        Map.of("role", "assistant", "content", exampleAssistant),
-                        Map.of("role", "user", "content", userPrompt)
-                )
-        );
-
-        return Flux.create(emitter -> {
-            restClient.post()
-                    .uri("/chat/completions")
-                    .body(requestBody)
-                    .exchange((request, response) -> {
-                        try (BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(response.getBody()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                if (line.startsWith("data: ")) {
-                                    String data = line.substring(6);
-                                    if (data.equals("[DONE]")) break;
-                                    JsonNode node = mapper.readTree(data);
-                                    JsonNode content = node.path("choices")
-                                            .get(0).path("delta").path("content");
-                                    if (!content.isMissingNode()) {
-                                        emitter.next(content.asText());
-                                    }
-                                }
-                            }
-                        }
-                        emitter.complete();
-                        return null;
-                    });
-        });
     }
 }
