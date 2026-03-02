@@ -2,11 +2,11 @@
 
 import { ArrowRight, ChefHat, RotateCcw } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import { IngredientInput } from '@/components/ingredient-input';
 import { RecipeStream } from '@/components/recipe-stream';
-import { Suggestions } from '@/components/suggestions';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Suggestions } from '@/components/suggestions';
 import { isRecipeLanguage, type RecipeLanguage } from '@/lib/recipes/types';
 
 interface RecipeBuilderProps {

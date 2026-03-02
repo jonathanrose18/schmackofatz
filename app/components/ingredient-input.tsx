@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, type KeyboardEvent } from 'react';
-import { X, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { X, Plus } from 'lucide-react';
+import { useState, useRef, type KeyboardEvent } from 'react';
+
 import { normalizeIngredient } from '@/lib/ingredients';
 
 interface IngredientInputProps {
